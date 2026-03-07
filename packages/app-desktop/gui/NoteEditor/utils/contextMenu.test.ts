@@ -1,25 +1,10 @@
 import { ContextMenuItemType } from '@joplin/lib/services/plugins/api/types';
 import { ContextMenuOptions } from './contextMenuUtils';
 
-// We need to mock some dependencies before importing menuItems
+import { setupDatabaseAndSynchronizer, switchClient } from '@joplin/lib/testing/test-utils';
+
+// We need to mock some dependencies before importing menuItems, mostly UI and bridge components
 jest.mock('@joplin/lib/services/ResourceEditWatcher/index', () => ({}));
-jest.mock('@joplin/lib/models/Resource', () => ({
-	default: { load: jest.fn(), fullPath: jest.fn() },
-	resourceOcrStatusToString: jest.fn(),
-}));
-jest.mock('@joplin/lib/models/BaseItem', () => ({
-	default: { loadItemById: jest.fn(), syncShareCache: {} },
-}));
-jest.mock('@joplin/lib/BaseModel', () => ({
-	default: { TYPE_NOTE: 1, TYPE_RESOURCE: 4 },
-	ModelType: { Resource: 4, Note: 1 },
-}));
-jest.mock('@joplin/lib/models/Setting', () => ({
-	default: { value: jest.fn() },
-}));
-jest.mock('@joplin/lib/models/ItemChange', () => ({
-	default: { SOURCE_UNSPECIFIED: 0 },
-}));
 jest.mock('@joplin/lib/shim', () => ({
 	default: { showErrorDialog: jest.fn(), showMessageBox: jest.fn(), fsDriver: jest.fn() },
 	MessageBoxType: { Error: 'error' },
@@ -32,9 +17,6 @@ jest.mock('@joplin/lib/services/CommandService', () => ({
 }));
 jest.mock('@joplin/lib/SyncTargetRegistry', () => ({
 	default: { isJoplinServerOrCloud: jest.fn() },
-}));
-jest.mock('@joplin/lib/models/utils/readOnly', () => ({
-	itemIsReadOnlySync: jest.fn(),
 }));
 jest.mock('../../../services/bridge', () => {
 	const Menu = jest.fn();
@@ -52,9 +34,6 @@ jest.mock('../../../services/bridge', () => {
 		}),
 	};
 });
-jest.mock('@joplin/lib/locale', () => ({
-	_: (s: string, ...args: string[]) => [s, ...args].join(' '),
-}));
 jest.mock('./clipboardUtils', () => ({
 	copyHtmlToClipboard: jest.fn(),
 }));
@@ -83,7 +62,9 @@ describe('contextMenu - isActive predicates', () => {
 	const dispatch = jest.fn();
 	let items: ReturnType<typeof menuItems>;
 
-	beforeEach(() => {
+	beforeEach(async () => {
+		await setupDatabaseAndSynchronizer(1);
+		await switchClient(1);
 		items = menuItems(dispatch);
 	});
 
